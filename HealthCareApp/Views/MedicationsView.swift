@@ -12,9 +12,15 @@ struct MedicationsView: View {
     @State private var showingAddMedication = false
     @State private var showTakenAlert = false
     
-    // Group medications by time of day
-    private var medicationsByTimeOfDay: [Medication.TimeOfDay: [Medication]] {
-        Dictionary(grouping: viewModel.medications) { $0.timeOfDay }
+    // Precompute grouped and filtered medications
+    private var groupedMedications: [(timeOfDay: Medication.TimeOfDay, foodGroups: [(foodRelation: Medication.FoodRelation, meds: [Medication])])] {
+        Medication.TimeOfDay.allCases.map { timeOfDay in
+            let medsForTime = viewModel.medications.filter { $0.timeOfDay == timeOfDay }
+            let foodGroups = Medication.FoodRelation.allCases.map { foodRelation in
+                (foodRelation, medsForTime.filter { $0.foodRelation == foodRelation })
+            }.filter { !$0.1.isEmpty }
+            return (timeOfDay, foodGroups)
+        }.filter { !$0.foodGroups.isEmpty }
     }
     
     var body: some View {
@@ -25,31 +31,7 @@ struct MedicationsView: View {
                     dailyProgressSection
                     
                     // Medications grouped by time of day and food relation
-                    ForEach(Medication.TimeOfDay.allCases, id: \.self) { timeOfDay in
-                        if let medications = medicationsByTimeOfDay[timeOfDay], !medications.isEmpty {
-                            Section(timeOfDay.rawValue) {
-                                ForEach(Medication.FoodRelation.allCases, id: \.self) { foodRelation in
-                                    let filteredMeds = medications.filter { $0.foodRelation == foodRelation }
-                                    if !filteredMeds.isEmpty {
-                                        Section(foodRelation.rawValue) {
-                                            ForEach(filteredMeds) { medication in
-                                                MedicationRow(medication: medication, highlight: medication.id == viewModel.highlightedMedicationId) {
-                                                    viewModel.toggleMedicationTaken(medication)
-                                                }
-                                                .id(medication.id)
-                                            }
-                                            .onDelete { indexSet in
-                                                let globalIndices = indexSet.compactMap { idx in
-                                                    viewModel.medications.firstIndex(where: { $0.id == filteredMeds[idx].id })
-                                                }
-                                                viewModel.deleteMedication(at: IndexSet(globalIndices))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    MedicationSectionList(groupedMedications: groupedMedications, viewModel: viewModel)
                 }
                 .onChange(of: viewModel.highlightedMedicationId) { id in
                     if let id = id {
@@ -84,7 +66,7 @@ struct MedicationsView: View {
             }
         }
         .onAppear {
-            viewModel.requestNotificationPermission()
+            NotificationManager.shared.requestNotificationPermission()
             if let _ = viewModel.pendingShowTakenConfirmationId {
                 viewModel.showTakenConfirmation = true
                 viewModel.pendingShowTakenConfirmationId = nil
@@ -312,6 +294,34 @@ struct AddMedicationView: View {
         
         viewModel.addMedication(newMedication)
         dismiss()
+    }
+}
+
+struct MedicationSectionList: View {
+    let groupedMedications: [(timeOfDay: Medication.TimeOfDay, foodGroups: [(foodRelation: Medication.FoodRelation, meds: [Medication])])]
+    @ObservedObject var viewModel: HealthAppViewModel
+
+    var body: some View {
+        ForEach(groupedMedications, id: \.timeOfDay) { group in
+            Section(group.timeOfDay.rawValue) {
+                ForEach(group.foodGroups, id: \.foodRelation) { foodGroup in
+                    Section(foodGroup.foodRelation.rawValue) {
+                        ForEach(foodGroup.meds) { medication in
+                            MedicationRow(medication: medication, highlight: medication.id == viewModel.highlightedMedicationId) {
+                                viewModel.toggleMedicationTaken(medication)
+                            }
+                            .id(medication.id)
+                        }
+                        .onDelete { indexSet in
+                            let globalIndices = indexSet.compactMap { idx in
+                                viewModel.medications.firstIndex(where: { $0.id == foodGroup.meds[idx].id })
+                            }
+                            viewModel.deleteMedication(at: IndexSet(globalIndices))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

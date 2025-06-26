@@ -67,8 +67,8 @@ struct HealthCareApp: App {
 
     init() {
         // Register notification actions
-        let viewModel = HealthAppViewModel.shared
-        viewModel.registerNotificationActions()
+        NotificationManager.shared.registerNotificationActions()
+        NotificationManager.shared.requestNotificationPermission()
         UNUserNotificationCenter.current().delegate = Self.notificationDelegate
     }
 
