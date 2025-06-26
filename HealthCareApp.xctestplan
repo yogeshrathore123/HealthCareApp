@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "CF0F3D90-5FE6-48FF-B6C6-93B62661A49A",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:HealthCareApp.xcodeproj",
+      "identifier" : "AB889C5F2E0BB45C00311F56",
+      "name" : "HealthCareApp"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:HealthCareApp.xcodeproj",
+        "identifier" : "AB889C6E2E0BB45F00311F56",
+        "name" : "HealthCareAppTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:HealthCareApp.xcodeproj",
+        "identifier" : "AB889C782E0BB45F00311F56",
+        "name" : "HealthCareAppUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
