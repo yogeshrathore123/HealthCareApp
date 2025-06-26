@@ -27,23 +27,22 @@
 		AB889C602E0BB45C00311F56 /* HealthCareApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthCareApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB889C6F2E0BB45F00311F56 /* HealthCareAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthCareAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB889C792E0BB45F00311F56 /* HealthCareAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HealthCareAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		AB889D352E0D34B400311F56 /* HealthCareApp.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = HealthCareApp.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		AB889C622E0BB45C00311F56 /* HealthCareAppTest */ = {
+		AB889C622E0BB45C00311F56 /* HealthCareApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = HealthCareAppTest;
+			path = HealthCareApp;
 			sourceTree = "<group>";
 		};
-		AB889C722E0BB45F00311F56 /* HealthCareAppTestTests */ = {
+		AB889C722E0BB45F00311F56 /* HealthCareAppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = HealthCareAppTestTests;
+			path = HealthCareAppTests;
 			sourceTree = "<group>";
 		};
-		AB889C7C2E0BB45F00311F56 /* HealthCareAppTestUITests */ = {
+		AB889C7C2E0BB45F00311F56 /* HealthCareAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = HealthCareAppTestUITests;
+			path = HealthCareAppUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -76,10 +75,9 @@
 		AB889C572E0BB45C00311F56 = {
 			isa = PBXGroup;
 			children = (
-				AB889D352E0D34B400311F56 /* HealthCareApp.xctestplan */,
-				AB889C622E0BB45C00311F56 /* HealthCareAppTest */,
-				AB889C722E0BB45F00311F56 /* HealthCareAppTestTests */,
-				AB889C7C2E0BB45F00311F56 /* HealthCareAppTestUITests */,
+				AB889C622E0BB45C00311F56 /* HealthCareApp */,
+				AB889C722E0BB45F00311F56 /* HealthCareAppTests */,
+				AB889C7C2E0BB45F00311F56 /* HealthCareAppUITests */,
 				AB889C612E0BB45C00311F56 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -110,7 +108,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				AB889C622E0BB45C00311F56 /* HealthCareAppTest */,
+				AB889C622E0BB45C00311F56 /* HealthCareApp */,
 			);
 			name = HealthCareApp;
 			packageProductDependencies = (
@@ -133,7 +131,7 @@
 				AB889C712E0BB45F00311F56 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				AB889C722E0BB45F00311F56 /* HealthCareAppTestTests */,
+				AB889C722E0BB45F00311F56 /* HealthCareAppTests */,
 			);
 			name = HealthCareAppTests;
 			packageProductDependencies = (
@@ -156,7 +154,7 @@
 				AB889C7B2E0BB45F00311F56 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				AB889C7C2E0BB45F00311F56 /* HealthCareAppTestUITests */,
+				AB889C7C2E0BB45F00311F56 /* HealthCareAppUITests */,
 			);
 			name = HealthCareAppUITests;
 			packageProductDependencies = (
@@ -402,7 +400,6 @@
 				DEVELOPMENT_TEAM = R36X7P8799;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = HealthCareApp;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -435,7 +432,6 @@
 				DEVELOPMENT_TEAM = R36X7P8799;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = HealthCareApp;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
