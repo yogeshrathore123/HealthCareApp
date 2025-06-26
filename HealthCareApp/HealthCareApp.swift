@@ -1,5 +1,5 @@
 //
-//  HealthCareAppTestApp.swift
+//  HealthCareApp.swift
 //  HealthCareApp
 //
 //  Created by Yogesh Rathore on 25/06/25.
@@ -48,7 +48,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 }
 
 @main
-struct HealthCareAppTestApp: App {
+struct HealthCareApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
