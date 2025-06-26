@@ -1,6 +1,6 @@
 //
 //  AppointmentsView.swift
-//  HealthCareAppTest
+//  HealthCareApp
 //
 //  Created by Yogesh Rathore on 25/06/25.
 //

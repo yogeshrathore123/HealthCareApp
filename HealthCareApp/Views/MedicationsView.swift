@@ -1,6 +1,6 @@
 //
 //  MedicationsView.swift
-//  HealthCareAppTest
+//  HealthCareApp
 //
 //  Created by Yogesh Rathore on 25/06/25.
 //
@@ -10,23 +10,55 @@ import SwiftUI
 struct MedicationsView: View {
     @EnvironmentObject var viewModel: HealthAppViewModel
     @State private var showingAddMedication = false
+    @State private var showTakenAlert = false
+    
+    // Group medications by time of day
+    private var medicationsByTimeOfDay: [Medication.TimeOfDay: [Medication]] {
+        Dictionary(grouping: viewModel.medications) { $0.timeOfDay }
+    }
     
     var body: some View {
         NavigationView {
-            List {
-                // Daily Progress
-                dailyProgressSection
-                
-                // Medications by Time of Day
-                ForEach(Medication.TimeOfDay.allCases, id: \.self) { timeOfDay in
-                    if let medications = viewModel.medicationsByTimeOfDay[timeOfDay] {
-                        Section(timeOfDay.rawValue) {
-                            ForEach(medications) { medication in
-                                MedicationRow(medication: medication) {
-                                    viewModel.toggleMedicationTaken(medication)
+            ScrollViewReader { proxy in
+                List {
+                    // Daily Progress
+                    dailyProgressSection
+                    
+                    // Medications grouped by time of day and food relation
+                    ForEach(Medication.TimeOfDay.allCases, id: \.self) { timeOfDay in
+                        if let medications = medicationsByTimeOfDay[timeOfDay], !medications.isEmpty {
+                            Section(timeOfDay.rawValue) {
+                                ForEach(Medication.FoodRelation.allCases, id: \.self) { foodRelation in
+                                    let filteredMeds = medications.filter { $0.foodRelation == foodRelation }
+                                    if !filteredMeds.isEmpty {
+                                        Section(foodRelation.rawValue) {
+                                            ForEach(filteredMeds) { medication in
+                                                MedicationRow(medication: medication, highlight: medication.id == viewModel.highlightedMedicationId) {
+                                                    viewModel.toggleMedicationTaken(medication)
+                                                }
+                                                .id(medication.id)
+                                            }
+                                            .onDelete { indexSet in
+                                                let globalIndices = indexSet.compactMap { idx in
+                                                    viewModel.medications.firstIndex(where: { $0.id == filteredMeds[idx].id })
+                                                }
+                                                viewModel.deleteMedication(at: IndexSet(globalIndices))
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                            .onDelete(perform: viewModel.deleteMedication)
+                        }
+                    }
+                }
+                .onChange(of: viewModel.highlightedMedicationId) { id in
+                    if let id = id {
+                        withAnimation {
+                            proxy.scrollTo(id, anchor: .center)
+                        }
+                        // Optionally clear highlight after a delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            viewModel.highlightedMedicationId = nil
                         }
                     }
                 }
@@ -50,6 +82,26 @@ struct MedicationsView: View {
                 AddMedicationView()
                     .environmentObject(viewModel)
             }
+        }
+        .onAppear {
+            viewModel.requestNotificationPermission()
+            if let _ = viewModel.pendingShowTakenConfirmationId {
+                viewModel.showTakenConfirmation = true
+                viewModel.pendingShowTakenConfirmationId = nil
+            }
+            if viewModel.showTakenConfirmation {
+                showTakenAlert = true
+            }
+        }
+        .onChange(of: viewModel.showTakenConfirmation) { newValue in
+            if newValue {
+                showTakenAlert = true
+            }
+        }
+        .alert(isPresented: $showTakenAlert) {
+            Alert(title: Text("Medication Taken"), message: Text("You have marked your medication as taken from a notification."), dismissButton: .default(Text("OK"), action: {
+                viewModel.showTakenConfirmation = false
+            }))
         }
     }
     
@@ -88,6 +140,7 @@ struct MedicationsView: View {
 // MARK: - Medication Row
 struct MedicationRow: View {
     let medication: Medication
+    var highlight: Bool = false
     let onToggle: () -> Void
     
     var body: some View {
@@ -117,10 +170,16 @@ struct MedicationRow: View {
                         .foregroundColor(.secondary)
                 }
                 
-                if let lastTaken = medication.lastTaken {
-                    Text("Taken at \(formatTime(lastTaken))")
+                HStack {
+                    Text(medication.foodRelation.rawValue)
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(.orange)
+                    
+                    if let lastTaken = medication.lastTaken {
+                        Text("Taken at \(formatTime(lastTaken))")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
                 }
             }
             
@@ -135,6 +194,8 @@ struct MedicationRow: View {
         }
         .padding(.vertical, 4)
         .opacity(medication.isTaken ? 0.7 : 1.0)
+        .background(highlight ? Color.yellow.opacity(0.3) : Color.clear)
+        .cornerRadius(8)
     }
     
     private func formatTime(_ date: Date) -> String {
@@ -176,7 +237,9 @@ struct AddMedicationView: View {
     @State private var name = ""
     @State private var dosage = ""
     @State private var frequency = ""
-    @State private var timeOfDay = Medication.TimeOfDay.morning
+    @State private var reminderTimes: [Date] = [Date()]
+    @State private var timeOfDay: Medication.TimeOfDay = .morning
+    @State private var foodRelation: Medication.FoodRelation = .none
     
     var body: some View {
         NavigationView {
@@ -189,6 +252,32 @@ struct AddMedicationView: View {
                         ForEach(Medication.TimeOfDay.allCases, id: \.self) { time in
                             Text(time.rawValue).tag(time)
                         }
+                    }
+                    Picker("Before/After Food", selection: $foodRelation) {
+                        ForEach(Medication.FoodRelation.allCases, id: \.self) { relation in
+                            Text(relation.rawValue).tag(relation)
+                        }
+                    }
+                }
+                Section("Reminder Times") {
+                    ForEach(reminderTimes.indices, id: \.self) { index in
+                        DatePicker("Reminder #\(index + 1)", selection: $reminderTimes[index], displayedComponents: .hourAndMinute)
+                    }
+                    Button(action: {
+                        reminderTimes.append(Date())
+                    }) {
+                        Label("Add Another Time", systemImage: "plus.circle")
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
+                    .padding(.top, 4)
+                    if reminderTimes.count > 1 {
+                        Button(action: {
+                            reminderTimes.removeLast()
+                        }) {
+                            Label("Remove Last Time", systemImage: "minus.circle")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
                     }
                 }
             }
@@ -205,7 +294,7 @@ struct AddMedicationView: View {
                     Button("Save") {
                         saveMedication()
                     }
-                    .disabled(name.isEmpty || dosage.isEmpty || frequency.isEmpty)
+                    .disabled(name.isEmpty || dosage.isEmpty || frequency.isEmpty || reminderTimes.isEmpty)
                 }
             }
         }
@@ -216,7 +305,9 @@ struct AddMedicationView: View {
             name: name,
             dosage: dosage,
             frequency: frequency,
-            timeOfDay: timeOfDay
+            reminderTimes: reminderTimes,
+            timeOfDay: timeOfDay,
+            foodRelation: foodRelation
         )
         
         viewModel.addMedication(newMedication)

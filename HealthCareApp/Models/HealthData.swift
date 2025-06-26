@@ -1,6 +1,6 @@
 //
 //  HealthData.swift
-//  HealthCareAppTest
+//  HealthCareApp
 //
 //  Created by Yogesh Rathore on 25/06/25.
 //
@@ -40,7 +40,9 @@ struct Medication: Identifiable, Codable {
     var name: String
     var dosage: String
     var frequency: String
+    var reminderTimes: [Date] // Array of reminder times
     var timeOfDay: TimeOfDay
+    var foodRelation: FoodRelation
     var isTaken: Bool = false
     var lastTaken: Date?
     
@@ -49,6 +51,12 @@ struct Medication: Identifiable, Codable {
         case afternoon = "Afternoon"
         case evening = "Evening"
         case night = "Night"
+    }
+    
+    enum FoodRelation: String, CaseIterable, Codable {
+        case beforeFood = "Before Food"
+        case afterFood = "After Food"
+        case none = "None"
     }
 }
 
@@ -101,25 +109,33 @@ struct MockData {
             name: "Vitamin D3",
             dosage: "1000 IU",
             frequency: "Daily",
-            timeOfDay: .morning
+            reminderTimes: [Date().addingTimeInterval(60*60*8)],
+            timeOfDay: .morning,
+            foodRelation: .afterFood
         ),
         Medication(
             name: "Omega-3",
             dosage: "1000 mg",
             frequency: "Daily",
-            timeOfDay: .evening
+            reminderTimes: [Date().addingTimeInterval(60*60*18)],
+            timeOfDay: .evening,
+            foodRelation: .beforeFood
         ),
         Medication(
             name: "Blood Pressure Medication",
             dosage: "10 mg",
             frequency: "Daily",
-            timeOfDay: .morning
+            reminderTimes: [Date().addingTimeInterval(60*60*8), Date().addingTimeInterval(60*60*20)],
+            timeOfDay: .morning,
+            foodRelation: .beforeFood
         ),
         Medication(
             name: "Sleep Aid",
             dosage: "5 mg",
             frequency: "As needed",
-            timeOfDay: .night
+            reminderTimes: [Date().addingTimeInterval(60*60*22)],
+            timeOfDay: .night,
+            foodRelation: .none
         )
     ]
     
