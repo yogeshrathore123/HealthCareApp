@@ -79,6 +79,12 @@ struct Medication: Identifiable, Codable {
     }
 }
 
+extension Medication: Equatable {
+    static func == (lhs: Medication, rhs: Medication) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 // MARK: - Health Summary Model
 struct HealthSummary: Codable {
     var steps: Int

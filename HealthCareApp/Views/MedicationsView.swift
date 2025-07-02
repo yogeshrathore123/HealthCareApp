@@ -6,11 +6,14 @@
 //
 
 import SwiftUI
+import Combine
 
 struct MedicationsView: View {
     @EnvironmentObject var viewModel: HealthAppViewModel
     @State private var showingAddMedication = false
     @State private var showTakenAlert = false
+    @State private var forceRefresh = 0
+    @State private var editingMedication: Medication? = nil
     
     // Precompute grouped and filtered medications
     private var groupedMedications: [(timeOfDay: Medication.TimeOfDay, foodGroups: [(foodRelation: Medication.FoodRelation, meds: [Medication])])] {
@@ -26,12 +29,22 @@ struct MedicationsView: View {
     var body: some View {
         NavigationView {
             ScrollViewReader { proxy in
-                List {
-                    // Daily Progress
-                    dailyProgressSection
-                    
-                    // Medications grouped by time of day and food relation
-                    MedicationSectionList(groupedMedications: groupedMedications, viewModel: viewModel)
+                ScrollView {
+                    VStack(alignment: .leading) {
+                        // Daily Progress
+                        dailyProgressSection
+                        // Medications grouped by time of day and food relation
+                        ForEach(groupedMedications, id: \.timeOfDay) { group in
+                            MedicationGroupSection(
+                                group: group,
+                                viewModel: viewModel,
+                                forceRefresh: $forceRefresh,
+                                editingMedication: $editingMedication
+                            )
+                        }
+                    }
+                    .padding()
+                    .id(forceRefresh)
                 }
                 .onChange(of: viewModel.highlightedMedicationId) { id in
                     if let id = id {
@@ -61,8 +74,17 @@ struct MedicationsView: View {
                 }
             }
             .sheet(isPresented: $showingAddMedication) {
-                AddMedicationView()
-                    .environmentObject(viewModel)
+                AddMedicationView(onAdd: {
+                    forceRefresh += 1
+                })
+                .environmentObject(viewModel)
+            }
+            .sheet(item: $editingMedication) { medication in
+                if let index = viewModel.medicationViewModel.medications.firstIndex(where: { $0.id == medication.id }) {
+                    EditMedicationView(medication: $viewModel.medicationViewModel.medications[index], onSave: {
+                        forceRefresh += 1
+                    })
+                }
             }
         }
         .onAppear {
@@ -119,10 +141,66 @@ struct MedicationsView: View {
     }
 }
 
+struct MedicationGroupSection: View {
+    let group: (timeOfDay: Medication.TimeOfDay, foodGroups: [(foodRelation: Medication.FoodRelation, meds: [Medication])])
+    @ObservedObject var viewModel: HealthAppViewModel
+    @Binding var forceRefresh: Int
+    @Binding var editingMedication: Medication?
+
+    var body: some View {
+        Text(group.timeOfDay.rawValue)
+            .font(.headline)
+            .padding(.top)
+        ForEach(group.foodGroups, id: \.foodRelation) { foodGroup in
+            Text(foodGroup.foodRelation.rawValue)
+                .font(.subheadline)
+                .padding(.top, 4)
+            ForEach(foodGroup.meds) { medication in
+                MedicationRowWithActions(
+                    medication: medication,
+                    viewModel: viewModel,
+                    forceRefresh: $forceRefresh,
+                    editingMedication: $editingMedication
+                )
+            }
+        }
+    }
+}
+
+struct MedicationRowWithActions: View {
+    let medication: Medication
+    @ObservedObject var viewModel: HealthAppViewModel
+    @Binding var forceRefresh: Int
+    @Binding var editingMedication: Medication?
+
+    var body: some View {
+        if let index = viewModel.medicationViewModel.medications.firstIndex(where: { $0.id == medication.id }) {
+            HStack(alignment: .top) {
+                MedicationRow(
+                    medication: $viewModel.medicationViewModel.medications[index],
+                    highlight: medication.id == viewModel.highlightedMedicationId,
+                    onToggle: { forceRefresh += 1 }
+                )
+                Spacer()
+                Button(action: { editingMedication = viewModel.medicationViewModel.medications[index] }) {
+                    Image(systemName: "pencil").foregroundColor(.blue)
+                }
+                Button(action: {
+                    viewModel.medicationViewModel.deleteMedication(at: IndexSet(integer: index))
+                    forceRefresh += 1
+                }) {
+                    Image(systemName: "trash").foregroundColor(.red)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Medication Row
 struct MedicationRow: View {
     @Binding var medication: Medication
     var highlight: Bool = false
+    var onToggle: (() -> Void)? = nil
     
     var body: some View {
         HStack(spacing: 12) {
@@ -170,6 +248,7 @@ struct MedicationRow: View {
             Button(action: {
                 medication.isTaken.toggle()
                 medication.lastTaken = medication.isTaken ? Date() : nil
+                onToggle?()
             }) {
                 Image(systemName: medication.isTaken ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
@@ -211,6 +290,7 @@ struct CircularProgressView: View {
 struct AddMedicationView: View {
     @EnvironmentObject var viewModel: HealthAppViewModel
     @Environment(\.dismiss) private var dismiss
+    var onAdd: (() -> Void)? = nil
     
     @State private var name = ""
     @State private var dosage = ""
@@ -289,36 +369,103 @@ struct AddMedicationView: View {
         )
         
         viewModel.medicationViewModel.addMedication(newMedication)
+        onAdd?()
         dismiss()
     }
 }
 
-struct MedicationSectionList: View {
-    let groupedMedications: [(timeOfDay: Medication.TimeOfDay, foodGroups: [(foodRelation: Medication.FoodRelation, meds: [Medication])])]
-    @ObservedObject var viewModel: HealthAppViewModel
-
+// MARK: - Edit Medication View
+struct EditMedicationView: View {
+    @Binding var medication: Medication
+    @Environment(\.dismiss) private var dismiss
+    var onSave: (() -> Void)? = nil
+    @State private var name: String
+    @State private var dosage: String
+    @State private var frequency: String
+    @State private var reminderTimes: [Date]
+    @State private var timeOfDay: Medication.TimeOfDay
+    @State private var foodRelation: Medication.FoodRelation
+    
+    init(medication: Binding<Medication>, onSave: (() -> Void)? = nil) {
+        self._medication = medication
+        self.onSave = onSave
+        _name = State(initialValue: medication.wrappedValue.name)
+        _dosage = State(initialValue: medication.wrappedValue.dosage)
+        _frequency = State(initialValue: medication.wrappedValue.frequency)
+        _reminderTimes = State(initialValue: medication.wrappedValue.reminderTimes)
+        _timeOfDay = State(initialValue: medication.wrappedValue.timeOfDay)
+        _foodRelation = State(initialValue: medication.wrappedValue.foodRelation)
+    }
+    
     var body: some View {
-        ForEach(groupedMedications, id: \.timeOfDay) { group in
-            Section(group.timeOfDay.rawValue) {
-                ForEach(group.foodGroups, id: \.foodRelation) { foodGroup in
-                    Section(foodGroup.foodRelation.rawValue) {
-                        ForEach(foodGroup.meds) { medication in
-                            if let index = viewModel.medicationViewModel.medications.firstIndex(where: { $0.id == medication.id }) {
-                                MedicationRow(
-                                    medication: $viewModel.medicationViewModel.medications[index],
-                                    highlight: medication.id == viewModel.highlightedMedicationId
-                                )
-                                .id(medication.id)
-                            }
-                        }
-                        .onDelete { indexSet in
-                            let globalIndices = indexSet.compactMap { idx in
-                                viewModel.medicationViewModel.medications.firstIndex(where: { $0.id == foodGroup.meds[idx].id })
-                            }
-                            viewModel.medicationViewModel.deleteMedication(at: IndexSet(globalIndices))
-                        }
+        NavigationView {
+            Form {
+                medicationDetailsSection
+                reminderTimesSection
+            }
+            .navigationTitle("Edit Medication")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        $medication.wrappedValue.name = name
+                        $medication.wrappedValue.dosage = dosage
+                        $medication.wrappedValue.frequency = frequency
+                        $medication.wrappedValue.reminderTimes = reminderTimes
+                        $medication.wrappedValue.timeOfDay = timeOfDay
+                        $medication.wrappedValue.foodRelation = foodRelation
+                        onSave?()
+                        dismiss()
+                    }
+                    .disabled(name.isEmpty || dosage.isEmpty || frequency.isEmpty || reminderTimes.isEmpty)
+                }
+            }
+        }
+    }
+    
+    private var medicationDetailsSection: some View {
+        Section("Medication Details") {
+            TextField("Medication Name", text: $name)
+            TextField("Dosage", text: $dosage)
+            TextField("Frequency", text: $frequency)
+            Picker("Time of Day", selection: $timeOfDay) {
+                ForEach(Medication.TimeOfDay.allCases, id: \.self) { time in
+                    Text(time.rawValue).tag(time)
+                }
+            }
+            Picker("Before/After Food", selection: $foodRelation) {
+                ForEach(Medication.FoodRelation.allCases, id: \.self) { relation in
+                    Text(relation.rawValue).tag(relation)
+                }
+            }
+        }
+    }
+    
+    private var reminderTimesSection: some View {
+        Section("Reminder Times") {
+            ForEach(reminderTimes.indices, id: \.self) { index in
+                DatePicker("Reminder #\(index + 1)", selection: $reminderTimes[index], displayedComponents: .hourAndMinute)
+            }
+            Button(action: {
+                reminderTimes.append(Date())
+            }) {
+                Label("Add Another Time", systemImage: "plus.circle")
+            }
+            .buttonStyle(BorderlessButtonStyle())
+            .padding(.top, 4)
+            if reminderTimes.count > 1 {
+                Button(action: {
+                    reminderTimes.removeLast()
+                }) {
+                    Label("Remove Last Time", systemImage: "minus.circle")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(BorderlessButtonStyle())
             }
         }
     }
