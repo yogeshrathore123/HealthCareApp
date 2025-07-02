@@ -10,48 +10,43 @@ import SwiftUI
 struct AppointmentsView: View {
     @EnvironmentObject var viewModel: HealthAppViewModel
     @State private var showingAddAppointment = false
+    @State private var forceRefresh = 0
     
     var body: some View {
+        let appointments = viewModel.appointmentViewModel.appointments
+        let _ = print("AppointmentsView recomputed, count: \(appointments.count)")
         NavigationView {
-            List {
-                // Upcoming Appointments Section
-                if !viewModel.appointmentViewModel.upcomingAppointments.isEmpty {
-                    Section("Upcoming Appointments") {
-                        ForEach(viewModel.appointmentViewModel.upcomingAppointments) { appointment in
-                            if let index = viewModel.appointmentViewModel.appointments.firstIndex(where: { $0.id == appointment.id }) {
-                                AppointmentRow(
-                                    appointment: $viewModel.appointmentViewModel.appointments[index],
-                                    isCompleted: false
-                                )
+            ScrollView {
+                VStack(alignment: .leading) {
+                    // Upcoming Appointments Section
+                    if appointments.contains(where: { !$0.isCompleted && $0.date > Date() }) {
+                        Text("Upcoming Appointments")
+                            .font(.headline)
+                            .padding(.top)
+                        ForEach(appointments.indices, id: \.self) { idx in
+                            if !appointments[idx].isCompleted && appointments[idx].date > Date() {
+                                AppointmentRow(appointment: appointments[idx], isCompleted: false, onComplete: { forceRefresh += 1 })
                             }
                         }
-                        .onDelete(perform: viewModel.appointmentViewModel.deleteAppointment)
+                    } else {
+                        Text("No upcoming appointments")
+                            .foregroundColor(.secondary)
+                            .padding(.top)
                     }
-                } else {
-                    Section("Upcoming Appointments") {
-                        HStack {
-                            Image(systemName: "calendar.badge.plus")
-                                .foregroundColor(.blue)
-                            Text("No upcoming appointments")
-                                .foregroundColor(.secondary)
+                    // Completed Appointments Section
+                    if appointments.contains(where: { $0.isCompleted }) {
+                        Text("Completed Appointments")
+                            .font(.headline)
+                            .padding(.top)
+                        ForEach(appointments.indices, id: \.self) { idx in
+                            if appointments[idx].isCompleted {
+                                AppointmentRow(appointment: appointments[idx], isCompleted: true)
+                            }
                         }
                     }
                 }
-                
-                // Completed Appointments Section
-                if !viewModel.appointmentViewModel.completedAppointments.isEmpty {
-                    Section("Completed Appointments") {
-                        ForEach(viewModel.appointmentViewModel.completedAppointments) { appointment in
-                            if let index = viewModel.appointmentViewModel.appointments.firstIndex(where: { $0.id == appointment.id }) {
-                                AppointmentRow(
-                                    appointment: $viewModel.appointmentViewModel.appointments[index],
-                                    isCompleted: true
-                                )
-                            }
-                        }
-                        .onDelete(perform: viewModel.appointmentViewModel.deleteAppointment)
-                    }
-                }
+                .padding()
+                .id(forceRefresh)
             }
             .navigationTitle("Appointments")
             .toolbar {
@@ -62,8 +57,10 @@ struct AppointmentsView: View {
                 }
             }
             .sheet(isPresented: $showingAddAppointment) {
-                AddAppointmentView()
-                    .environmentObject(viewModel)
+                AddAppointmentView(onAdd: {
+                    forceRefresh += 1
+                })
+                .environmentObject(viewModel)
             }
         }
     }
@@ -71,12 +68,14 @@ struct AppointmentsView: View {
 
 // MARK: - Appointment Row
 struct AppointmentRow: View {
-    @Binding var appointment: Appointment
+    @ObservedObject var appointment: Appointment
     let isCompleted: Bool
+    var onComplete: (() -> Void)? = nil
     
-    init(appointment: Binding<Appointment>, isCompleted: Bool = false) {
-        self._appointment = appointment
+    init(appointment: Appointment, isCompleted: Bool = false, onComplete: (() -> Void)? = nil) {
+        self.appointment = appointment
         self.isCompleted = isCompleted
+        self.onComplete = onComplete
     }
     
     var body: some View {
@@ -97,6 +96,7 @@ struct AppointmentRow: View {
                 if !isCompleted {
                     Button(action: {
                         appointment.isCompleted = true
+                        onComplete?()
                     }) {
                         Image(systemName: "checkmark.circle")
                             .foregroundColor(.green)
@@ -137,11 +137,12 @@ struct AppointmentRow: View {
 struct AddAppointmentView: View {
     @EnvironmentObject var viewModel: HealthAppViewModel
     @Environment(\.dismiss) private var dismiss
+    var onAdd: (() -> Void)? = nil
     
     @State private var title = ""
     @State private var doctor = ""
     @State private var location = ""
-    @State private var date = Date().addingTimeInterval(3600)
+    @State private var date = Date().addingTimeInterval(86400) // Default to 1 day from now
     @State private var notes = ""
     
     var body: some View {
@@ -186,8 +187,11 @@ struct AddAppointmentView: View {
             location: location,
             notes: notes.isEmpty ? nil : notes
         )
-        
+        print("Adding appointment: \(newAppointment)")
         viewModel.appointmentViewModel.addAppointment(newAppointment)
+        print("All appointments: \(viewModel.appointmentViewModel.appointments)")
+        print("Upcoming appointments: \(viewModel.appointmentViewModel.upcomingAppointments)")
+        onAdd?()
         dismiss()
     }
 }

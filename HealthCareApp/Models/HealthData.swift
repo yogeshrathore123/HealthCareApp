@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 // MARK: - User Model
 struct User: Identifiable, Codable {
@@ -24,14 +25,32 @@ struct User: Identifiable, Codable {
 }
 
 // MARK: - Appointment Model
-struct Appointment: Identifiable, Codable {
-    var id = UUID()
-    var title: String
-    var doctor: String
-    var date: Date
-    var location: String
-    var notes: String?
-    var isCompleted: Bool = false
+final class Appointment: Identifiable, ObservableObject {
+    let id: UUID
+    @Published var title: String
+    @Published var doctor: String
+    @Published var date: Date
+    @Published var location: String
+    @Published var notes: String?
+    @Published var isCompleted: Bool
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        doctor: String,
+        date: Date,
+        location: String,
+        notes: String? = nil,
+        isCompleted: Bool = false
+    ) {
+        self.id = id
+        self.title = title
+        self.doctor = doctor
+        self.date = date
+        self.location = location
+        self.notes = notes
+        self.isCompleted = isCompleted
+    }
 }
 
 // MARK: - Medication Model

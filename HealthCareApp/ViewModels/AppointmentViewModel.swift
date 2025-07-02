@@ -10,12 +10,13 @@ class AppointmentViewModel: ObservableObject {
     }
     
     func addAppointment(_ appointment: Appointment) {
-        appointments.append(appointment)
-        appointments.sort { $0.date < $1.date }
+        appointments = appointments + [appointment]
     }
     
     func deleteAppointment(at indexSet: IndexSet) {
-        appointments.remove(atOffsets: indexSet)
+        var copy = appointments
+        copy.remove(atOffsets: indexSet)
+        appointments = copy
     }
     
     func markAppointmentAsCompleted(_ appointment: Appointment) {
