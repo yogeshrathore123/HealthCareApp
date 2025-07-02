@@ -11,6 +11,7 @@ struct AppointmentsView: View {
     @EnvironmentObject var viewModel: HealthAppViewModel
     @State private var showingAddAppointment = false
     @State private var forceRefresh = 0
+    @State private var editingAppointment: Appointment? = nil
     
     var body: some View {
         let appointments = viewModel.appointmentViewModel.appointments
@@ -25,7 +26,21 @@ struct AppointmentsView: View {
                             .padding(.top)
                         ForEach(appointments.indices, id: \.self) { idx in
                             if !appointments[idx].isCompleted && appointments[idx].date > Date() {
-                                AppointmentRow(appointment: appointments[idx], isCompleted: false, onComplete: { forceRefresh += 1 })
+                                HStack(alignment: .top) {
+                                    AppointmentRow(appointment: appointments[idx], isCompleted: false, onComplete: { forceRefresh += 1 })
+                                    Spacer()
+                                    Button(action: { editingAppointment = appointments[idx] }) {
+                                        Image(systemName: "pencil")
+                                            .foregroundColor(.blue)
+                                    }
+                                    Button(action: {
+                                        viewModel.appointmentViewModel.deleteAppointment(at: IndexSet(integer: idx))
+                                        forceRefresh += 1
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -40,7 +55,21 @@ struct AppointmentsView: View {
                             .padding(.top)
                         ForEach(appointments.indices, id: \.self) { idx in
                             if appointments[idx].isCompleted {
-                                AppointmentRow(appointment: appointments[idx], isCompleted: true)
+                                HStack(alignment: .top) {
+                                    AppointmentRow(appointment: appointments[idx], isCompleted: true)
+                                    Spacer()
+                                    Button(action: { editingAppointment = appointments[idx] }) {
+                                        Image(systemName: "pencil")
+                                            .foregroundColor(.blue)
+                                    }
+                                    Button(action: {
+                                        viewModel.appointmentViewModel.deleteAppointment(at: IndexSet(integer: idx))
+                                        forceRefresh += 1
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
+                                }
                             }
                         }
                     }
@@ -61,6 +90,11 @@ struct AppointmentsView: View {
                     forceRefresh += 1
                 })
                 .environmentObject(viewModel)
+            }
+            .sheet(item: $editingAppointment) { appointment in
+                EditAppointmentView(appointment: appointment, onSave: {
+                    forceRefresh += 1
+                })
             }
         }
     }
@@ -193,6 +227,66 @@ struct AddAppointmentView: View {
         print("Upcoming appointments: \(viewModel.appointmentViewModel.upcomingAppointments)")
         onAdd?()
         dismiss()
+    }
+}
+
+// Add EditAppointmentView for editing an existing appointment:
+struct EditAppointmentView: View {
+    @ObservedObject var appointment: Appointment
+    @Environment(\.dismiss) private var dismiss
+    var onSave: (() -> Void)? = nil
+    @State private var title: String
+    @State private var doctor: String
+    @State private var location: String
+    @State private var date: Date
+    @State private var notes: String
+    
+    init(appointment: Appointment, onSave: (() -> Void)? = nil) {
+        self.appointment = appointment
+        self.onSave = onSave
+        _title = State(initialValue: appointment.title)
+        _doctor = State(initialValue: appointment.doctor)
+        _location = State(initialValue: appointment.location)
+        _date = State(initialValue: appointment.date)
+        _notes = State(initialValue: appointment.notes ?? "")
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Appointment Details") {
+                    TextField("Title", text: $title)
+                    TextField("Doctor", text: $doctor)
+                    TextField("Location", text: $location)
+                    DatePicker("Date & Time", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                }
+                Section("Notes") {
+                    TextField("Optional notes", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .navigationTitle("Edit Appointment")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        appointment.title = title
+                        appointment.doctor = doctor
+                        appointment.location = location
+                        appointment.date = date
+                        appointment.notes = notes.isEmpty ? nil : notes
+                        onSave?()
+                        dismiss()
+                    }
+                    .disabled(title.isEmpty || doctor.isEmpty || location.isEmpty)
+                }
+            }
+        }
     }
 }
 
