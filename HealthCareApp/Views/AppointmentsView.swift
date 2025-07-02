@@ -15,14 +15,17 @@ struct AppointmentsView: View {
         NavigationView {
             List {
                 // Upcoming Appointments Section
-                if !viewModel.upcomingAppointments.isEmpty {
+                if !viewModel.appointmentViewModel.upcomingAppointments.isEmpty {
                     Section("Upcoming Appointments") {
-                        ForEach(viewModel.upcomingAppointments) { appointment in
-                            AppointmentRow(appointment: appointment) {
-                                viewModel.markAppointmentAsCompleted(appointment)
+                        ForEach(viewModel.appointmentViewModel.upcomingAppointments) { appointment in
+                            if let index = viewModel.appointmentViewModel.appointments.firstIndex(where: { $0.id == appointment.id }) {
+                                AppointmentRow(
+                                    appointment: $viewModel.appointmentViewModel.appointments[index],
+                                    isCompleted: false
+                                )
                             }
                         }
-                        .onDelete(perform: viewModel.deleteAppointment)
+                        .onDelete(perform: viewModel.appointmentViewModel.deleteAppointment)
                     }
                 } else {
                     Section("Upcoming Appointments") {
@@ -36,12 +39,17 @@ struct AppointmentsView: View {
                 }
                 
                 // Completed Appointments Section
-                if !viewModel.completedAppointments.isEmpty {
+                if !viewModel.appointmentViewModel.completedAppointments.isEmpty {
                     Section("Completed Appointments") {
-                        ForEach(viewModel.completedAppointments) { appointment in
-                            AppointmentRow(appointment: appointment, isCompleted: true)
+                        ForEach(viewModel.appointmentViewModel.completedAppointments) { appointment in
+                            if let index = viewModel.appointmentViewModel.appointments.firstIndex(where: { $0.id == appointment.id }) {
+                                AppointmentRow(
+                                    appointment: $viewModel.appointmentViewModel.appointments[index],
+                                    isCompleted: true
+                                )
+                            }
                         }
-                        .onDelete(perform: viewModel.deleteAppointment)
+                        .onDelete(perform: viewModel.appointmentViewModel.deleteAppointment)
                     }
                 }
             }
@@ -63,14 +71,12 @@ struct AppointmentsView: View {
 
 // MARK: - Appointment Row
 struct AppointmentRow: View {
-    let appointment: Appointment
+    @Binding var appointment: Appointment
     let isCompleted: Bool
-    let onComplete: (() -> Void)?
     
-    init(appointment: Appointment, isCompleted: Bool = false, onComplete: (() -> Void)? = nil) {
-        self.appointment = appointment
+    init(appointment: Binding<Appointment>, isCompleted: Bool = false) {
+        self._appointment = appointment
         self.isCompleted = isCompleted
-        self.onComplete = onComplete
     }
     
     var body: some View {
@@ -89,7 +95,9 @@ struct AppointmentRow: View {
                 Spacer()
                 
                 if !isCompleted {
-                    Button(action: { onComplete?() }) {
+                    Button(action: {
+                        appointment.isCompleted = true
+                    }) {
                         Image(systemName: "checkmark.circle")
                             .foregroundColor(.green)
                             .font(.title2)
@@ -108,7 +116,7 @@ struct AppointmentRow: View {
                 
                 Spacer()
                 
-                Text(formatDate(appointment.date))
+                Text(DateUtils.formatDate(appointment.date))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -123,13 +131,6 @@ struct AppointmentRow: View {
         .padding(.vertical, 4)
         .opacity(isCompleted ? 0.7 : 1.0)
     }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
 }
 
 // MARK: - Add Appointment View
@@ -140,7 +141,7 @@ struct AddAppointmentView: View {
     @State private var title = ""
     @State private var doctor = ""
     @State private var location = ""
-    @State private var date = Date()
+    @State private var date = Date().addingTimeInterval(3600)
     @State private var notes = ""
     
     var body: some View {
@@ -186,7 +187,7 @@ struct AddAppointmentView: View {
             notes: notes.isEmpty ? nil : notes
         )
         
-        viewModel.addAppointment(newAppointment)
+        viewModel.appointmentViewModel.addAppointment(newAppointment)
         dismiss()
     }
 }

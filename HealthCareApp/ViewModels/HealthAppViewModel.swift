@@ -14,11 +14,13 @@ import UserNotifications
 class HealthAppViewModel: ObservableObject {
     static let shared = HealthAppViewModel()
     
-    // MARK: - Published Properties
-    @Published var user: User
-    @Published var appointments: [Appointment]
-    @Published var medications: [Medication]
-    @Published var healthSummary: HealthSummary
+    // Sub-view models
+    @Published var userViewModel: UserViewModel
+    @Published var appointmentViewModel: AppointmentViewModel
+    @Published var medicationViewModel: MedicationViewModel
+    @Published var healthSummaryViewModel: HealthSummaryViewModel
+    
+    // UI State
     @Published var showingAddAppointment = false
     @Published var showingAddMedication = false
     @Published var showTakenConfirmation = false
@@ -26,79 +28,64 @@ class HealthAppViewModel: ObservableObject {
     @Published var highlightedMedicationId: UUID? = nil
     @Published var pendingShowTakenConfirmationId: UUID? = nil
     
-    // MARK: - Initialization
-    init() {
-        self.user = MockData.sampleUser
-        self.appointments = MockData.sampleAppointments
-        self.medications = MockData.sampleMedications
-        self.healthSummary = MockData.sampleHealthSummary
+    init(
+        userViewModel: UserViewModel = UserViewModel(),
+        appointmentViewModel: AppointmentViewModel = AppointmentViewModel(),
+        medicationViewModel: MedicationViewModel = MedicationViewModel(),
+        healthSummaryViewModel: HealthSummaryViewModel = HealthSummaryViewModel()
+    ) {
+        self.userViewModel = userViewModel
+        self.appointmentViewModel = appointmentViewModel
+        self.medicationViewModel = medicationViewModel
+        self.healthSummaryViewModel = healthSummaryViewModel
     }
     
     // MARK: - User Profile Methods
     func updateUserProfile(name: String, age: Int, gender: User.Gender, height: Double, weight: Double) {
-        user.name = name
-        user.age = age
-        user.gender = gender
-        user.height = height
-        user.weight = weight
+        userViewModel.updateUserProfile(name: name, age: age, gender: gender, height: height, weight: weight)
     }
     
     // MARK: - Appointment Methods
     func addAppointment(_ appointment: Appointment) {
-        appointments.append(appointment)
-        appointments.sort { $0.date < $1.date }
+        appointmentViewModel.addAppointment(appointment)
     }
     
     func deleteAppointment(at indexSet: IndexSet) {
-        appointments.remove(atOffsets: indexSet)
+        appointmentViewModel.deleteAppointment(at: indexSet)
     }
     
     func markAppointmentAsCompleted(_ appointment: Appointment) {
-        if let index = appointments.firstIndex(where: { $0.id == appointment.id }) {
-            appointments[index].isCompleted = true
-        }
+        appointmentViewModel.markAppointmentAsCompleted(appointment)
     }
     
     var upcomingAppointments: [Appointment] {
-        appointments.filter { !$0.isCompleted && $0.date > Date() }
+        appointmentViewModel.upcomingAppointments
     }
     
     var completedAppointments: [Appointment] {
-        appointments.filter { $0.isCompleted }
+        appointmentViewModel.completedAppointments
     }
     
     // MARK: - Medication Methods
     func addMedication(_ medication: Medication) {
-        medications.append(medication)
-        NotificationManager.shared.scheduleMedicationNotification(for: medication)
+        medicationViewModel.addMedication(medication)
     }
     
     func deleteMedication(at indexSet: IndexSet) {
-        medications.remove(atOffsets: indexSet)
+        medicationViewModel.deleteMedication(at: indexSet)
     }
     
     func toggleMedicationTaken(_ medication: Medication) {
-        if let index = medications.firstIndex(where: { $0.id == medication.id }) {
-            medications[index].isTaken.toggle()
-            medications[index].lastTaken = medications[index].isTaken ? Date() : nil
-        }
+        medicationViewModel.toggleMedicationTaken(medication)
     }
     
     func resetDailyMedications() {
-        for index in medications.indices {
-            medications[index].isTaken = false
-            medications[index].lastTaken = nil
-        }
+        medicationViewModel.resetDailyMedications()
     }
     
     // MARK: - Health Summary Methods
     func updateHealthSummary(steps: Int, heartRate: Int, calories: Int, sleepHours: Double, waterIntake: Double) {
-        healthSummary.steps = steps
-        healthSummary.heartRate = heartRate
-        healthSummary.calories = calories
-        healthSummary.sleepHours = sleepHours
-        healthSummary.waterIntake = waterIntake
-        healthSummary.date = Date()
+        healthSummaryViewModel.updateHealthSummary(steps: steps, heartRate: heartRate, calories: calories, sleepHours: sleepHours, waterIntake: waterIntake)
     }
     
     // MARK: - Notification Methods
@@ -108,42 +95,15 @@ class HealthAppViewModel: ObservableObject {
     
     // MARK: - Utility Methods
     func calculateBMI() -> Double {
-        let heightInMeters = user.height / 100
-        return user.weight / (heightInMeters * heightInMeters)
+        userViewModel.calculateBMI()
     }
     
     func getBMICategory() -> String {
-        let bmi = calculateBMI()
-        switch bmi {
-        case ..<18.5:
-            return "Underweight"
-        case 18.5..<25:
-            return "Normal"
-        case 25..<30:
-            return "Overweight"
-        default:
-            return "Obese"
-        }
-    }
-    
-    func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-    
-    func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        userViewModel.getBMICategory()
     }
     
     // Add this method to mark a medication as taken by UUID
     func markMedicationAsTaken(withId id: UUID) {
-        if let index = medications.firstIndex(where: { $0.id == id }) {
-            medications[index].isTaken = true
-            medications[index].lastTaken = Date()
-        }
+        medicationViewModel.markMedicationAsTaken(withId: id)
     }
 } 

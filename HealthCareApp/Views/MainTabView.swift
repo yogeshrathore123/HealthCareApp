@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @StateObject private var viewModel = HealthAppViewModel.shared
+    @EnvironmentObject var viewModel: HealthAppViewModel
     @State private var selectedTab = 0
     
     var body: some View {

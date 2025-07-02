@@ -40,7 +40,7 @@ struct HomeView: View {
                 .font(.title2)
                 .foregroundColor(.secondary)
             
-            Text(viewModel.user.name)
+            Text(viewModel.userViewModel.user.name)
                 .font(.largeTitle)
                 .fontWeight(.bold)
             
@@ -63,7 +63,7 @@ struct HomeView: View {
         ], spacing: 16) {
             HealthMetricCard(
                 title: "Steps",
-                value: "\(viewModel.healthSummary.steps)",
+                value: "\(viewModel.healthSummaryViewModel.healthSummary.steps)",
                 subtitle: "Goal: 10,000",
                 icon: "figure.walk",
                 color: .blue
@@ -71,7 +71,7 @@ struct HomeView: View {
             
             HealthMetricCard(
                 title: "Heart Rate",
-                value: "\(viewModel.healthSummary.heartRate)",
+                value: "\(viewModel.healthSummaryViewModel.healthSummary.heartRate)",
                 subtitle: "BPM",
                 icon: "heart.fill",
                 color: .red
@@ -79,7 +79,7 @@ struct HomeView: View {
             
             HealthMetricCard(
                 title: "Calories",
-                value: "\(viewModel.healthSummary.calories)",
+                value: "\(viewModel.healthSummaryViewModel.healthSummary.calories)",
                 subtitle: "Burned",
                 icon: "flame.fill",
                 color: .orange
@@ -87,7 +87,7 @@ struct HomeView: View {
             
             HealthMetricCard(
                 title: "Sleep",
-                value: String(format: "%.1f", viewModel.healthSummary.sleepHours),
+                value: String(format: "%.1f", viewModel.healthSummaryViewModel.healthSummary.sleepHours),
                 subtitle: "Hours",
                 icon: "bed.double.fill",
                 color: .purple
@@ -130,12 +130,12 @@ struct HomeView: View {
                 .fontWeight(.semibold)
             
             VStack(spacing: 12) {
-                if let nextAppointment = viewModel.upcomingAppointments.first {
+                if let nextAppointment = viewModel.appointmentViewModel.upcomingAppointments.first {
                     ActivityRow(
                         icon: "calendar",
                         title: "Next Appointment",
                         subtitle: nextAppointment.title,
-                        time: viewModel.formatDate(nextAppointment.date),
+                        time: DateUtils.formatDate(nextAppointment.date),
                         color: .blue
                     )
                 }
@@ -143,7 +143,7 @@ struct HomeView: View {
                 ActivityRow(
                     icon: "pills",
                     title: "Medications",
-                    subtitle: "\(viewModel.medications.filter { $0.isTaken }.count) of \(viewModel.medications.count) taken",
+                    subtitle: "\(viewModel.medicationViewModel.medications.filter { $0.isTaken }.count) of \(viewModel.medicationViewModel.medications.count) taken",
                     time: "Today",
                     color: .green
                 )
@@ -151,7 +151,7 @@ struct HomeView: View {
                 ActivityRow(
                     icon: "heart.fill",
                     title: "Health Check",
-                    subtitle: "Last updated: \(viewModel.formatTime(viewModel.healthSummary.date))",
+                    subtitle: "Last updated: \(DateUtils.formatTime(viewModel.healthSummaryViewModel.healthSummary.date))",
                     time: "Today",
                     color: .red
                 )

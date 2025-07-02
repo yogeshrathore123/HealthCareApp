@@ -15,7 +15,7 @@ struct MedicationsView: View {
     // Precompute grouped and filtered medications
     private var groupedMedications: [(timeOfDay: Medication.TimeOfDay, foodGroups: [(foodRelation: Medication.FoodRelation, meds: [Medication])])] {
         Medication.TimeOfDay.allCases.map { timeOfDay in
-            let medsForTime = viewModel.medications.filter { $0.timeOfDay == timeOfDay }
+            let medsForTime = viewModel.medicationViewModel.medications.filter { $0.timeOfDay == timeOfDay }
             let foodGroups = Medication.FoodRelation.allCases.map { foodRelation in
                 (foodRelation, medsForTime.filter { $0.foodRelation == foodRelation })
             }.filter { !$0.1.isEmpty }
@@ -55,9 +55,9 @@ struct MedicationsView: View {
                 
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Reset") {
-                        viewModel.resetDailyMedications()
+                        viewModel.medicationViewModel.resetDailyMedications()
                     }
-                    .disabled(viewModel.medications.allSatisfy { !$0.isTaken })
+                    .disabled(viewModel.medicationViewModel.medications.allSatisfy { !$0.isTaken })
                 }
             }
             .sheet(isPresented: $showingAddMedication) {
@@ -97,7 +97,7 @@ struct MedicationsView: View {
                             .font(.headline)
                             .fontWeight(.semibold)
                         
-                        Text("\(viewModel.medications.filter { $0.isTaken }.count) of \(viewModel.medications.count) medications taken")
+                        Text("\(viewModel.medicationViewModel.medications.filter { $0.isTaken }.count) of \(viewModel.medicationViewModel.medications.count) medications taken")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -105,13 +105,13 @@ struct MedicationsView: View {
                     Spacer()
                     
                     CircularProgressView(
-                        progress: Double(viewModel.medications.filter { $0.isTaken }.count) / Double(max(viewModel.medications.count, 1)),
+                        progress: Double(viewModel.medicationViewModel.medications.filter { $0.isTaken }.count) / Double(max(viewModel.medicationViewModel.medications.count, 1)),
                         size: 60
                     )
                 }
                 
                 // Progress Bar
-                ProgressView(value: Double(viewModel.medications.filter { $0.isTaken }.count), total: Double(max(viewModel.medications.count, 1)))
+                ProgressView(value: Double(viewModel.medicationViewModel.medications.filter { $0.isTaken }.count), total: Double(max(viewModel.medicationViewModel.medications.count, 1)))
                     .progressViewStyle(LinearProgressViewStyle(tint: .green))
             }
             .padding(.vertical, 8)
@@ -121,9 +121,8 @@ struct MedicationsView: View {
 
 // MARK: - Medication Row
 struct MedicationRow: View {
-    let medication: Medication
+    @Binding var medication: Medication
     var highlight: Bool = false
-    let onToggle: () -> Void
     
     var body: some View {
         HStack(spacing: 12) {
@@ -158,7 +157,7 @@ struct MedicationRow: View {
                         .foregroundColor(.orange)
                     
                     if let lastTaken = medication.lastTaken {
-                        Text("Taken at \(formatTime(lastTaken))")
+                        Text("Taken at \(DateUtils.formatTime(lastTaken))")
                             .font(.caption)
                             .foregroundColor(.green)
                     }
@@ -168,7 +167,10 @@ struct MedicationRow: View {
             Spacer()
             
             // Toggle Button
-            Button(action: onToggle) {
+            Button(action: {
+                medication.isTaken.toggle()
+                medication.lastTaken = medication.isTaken ? Date() : nil
+            }) {
                 Image(systemName: medication.isTaken ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
                     .foregroundColor(medication.isTaken ? .green : .gray)
@@ -178,12 +180,6 @@ struct MedicationRow: View {
         .opacity(medication.isTaken ? 0.7 : 1.0)
         .background(highlight ? Color.yellow.opacity(0.3) : Color.clear)
         .cornerRadius(8)
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 
@@ -292,7 +288,7 @@ struct AddMedicationView: View {
             foodRelation: foodRelation
         )
         
-        viewModel.addMedication(newMedication)
+        viewModel.medicationViewModel.addMedication(newMedication)
         dismiss()
     }
 }
@@ -307,16 +303,19 @@ struct MedicationSectionList: View {
                 ForEach(group.foodGroups, id: \.foodRelation) { foodGroup in
                     Section(foodGroup.foodRelation.rawValue) {
                         ForEach(foodGroup.meds) { medication in
-                            MedicationRow(medication: medication, highlight: medication.id == viewModel.highlightedMedicationId) {
-                                viewModel.toggleMedicationTaken(medication)
+                            if let index = viewModel.medicationViewModel.medications.firstIndex(where: { $0.id == medication.id }) {
+                                MedicationRow(
+                                    medication: $viewModel.medicationViewModel.medications[index],
+                                    highlight: medication.id == viewModel.highlightedMedicationId
+                                )
+                                .id(medication.id)
                             }
-                            .id(medication.id)
                         }
                         .onDelete { indexSet in
                             let globalIndices = indexSet.compactMap { idx in
-                                viewModel.medications.firstIndex(where: { $0.id == foodGroup.meds[idx].id })
+                                viewModel.medicationViewModel.medications.firstIndex(where: { $0.id == foodGroup.meds[idx].id })
                             }
-                            viewModel.deleteMedication(at: IndexSet(globalIndices))
+                            viewModel.medicationViewModel.deleteMedication(at: IndexSet(globalIndices))
                         }
                     }
                 }

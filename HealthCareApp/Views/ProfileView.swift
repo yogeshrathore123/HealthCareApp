@@ -69,15 +69,15 @@ struct ProfileView: View {
                     )
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(viewModel.user.name)
+                    Text(viewModel.userViewModel.user.name)
                         .font(.title2)
                         .fontWeight(.semibold)
                     
-                    Text("\(viewModel.user.age) years old")
+                    Text("\(viewModel.userViewModel.user.age) years old")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text(viewModel.user.gender.rawValue)
+                    Text(viewModel.userViewModel.user.gender.rawValue)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -137,35 +137,35 @@ struct ProfileView: View {
                 HStack {
                     Text("Name")
                     Spacer()
-                    Text(viewModel.user.name)
+                    Text(viewModel.userViewModel.user.name)
                         .foregroundColor(.secondary)
                 }
                 
                 HStack {
                     Text("Age")
                     Spacer()
-                    Text("\(viewModel.user.age) years")
+                    Text("\(viewModel.userViewModel.user.age) years")
                         .foregroundColor(.secondary)
                 }
                 
                 HStack {
                     Text("Gender")
                     Spacer()
-                    Text(viewModel.user.gender.rawValue)
+                    Text(viewModel.userViewModel.user.gender.rawValue)
                         .foregroundColor(.secondary)
                 }
                 
                 HStack {
                     Text("Height")
                     Spacer()
-                    Text("\(String(format: "%.1f", viewModel.user.height)) cm")
+                    Text("\(String(format: "%.1f", viewModel.userViewModel.user.height)) cm")
                         .foregroundColor(.secondary)
                 }
                 
                 HStack {
                     Text("Weight")
                     Spacer()
-                    Text("\(String(format: "%.1f", viewModel.user.weight)) kg")
+                    Text("\(String(format: "%.1f", viewModel.userViewModel.user.weight)) kg")
                         .foregroundColor(.secondary)
                 }
             }
@@ -179,9 +179,9 @@ struct ProfileView: View {
                 Text("BMI")
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(String(format: "%.1f", viewModel.calculateBMI()))
+                    Text(String(format: "%.1f", viewModel.userViewModel.calculateBMI()))
                         .fontWeight(.semibold)
-                    Text(viewModel.getBMICategory())
+                    Text(viewModel.userViewModel.getBMICategory())
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -190,7 +190,7 @@ struct ProfileView: View {
             HStack {
                 Text("BMI Category")
                 Spacer()
-                Text(viewModel.getBMICategory())
+                Text(viewModel.userViewModel.getBMICategory())
                     .foregroundColor(bmiCategoryColor)
                     .fontWeight(.medium)
             }
@@ -248,7 +248,7 @@ struct ProfileView: View {
     
     // MARK: - Computed Properties
     private var bmiCategoryColor: Color {
-        let bmi = viewModel.calculateBMI()
+        let bmi = viewModel.userViewModel.calculateBMI()
         switch bmi {
         case ..<18.5:
             return .orange
@@ -263,11 +263,11 @@ struct ProfileView: View {
     
     // MARK: - Methods
     private func startEditing() {
-        editedName = viewModel.user.name
-        editedAge = String(viewModel.user.age)
-        editedGender = viewModel.user.gender
-        editedHeight = String(format: "%.1f", viewModel.user.height)
-        editedWeight = String(format: "%.1f", viewModel.user.weight)
+        editedName = viewModel.userViewModel.user.name
+        editedAge = String(viewModel.userViewModel.user.age)
+        editedGender = viewModel.userViewModel.user.gender
+        editedHeight = String(format: "%.1f", viewModel.userViewModel.user.height)
+        editedWeight = String(format: "%.1f", viewModel.userViewModel.user.weight)
         isEditing = true
     }
     
@@ -278,7 +278,7 @@ struct ProfileView: View {
             return
         }
         
-        viewModel.updateUserProfile(
+        viewModel.userViewModel.updateUserProfile(
             name: editedName,
             age: age,
             gender: editedGender,
