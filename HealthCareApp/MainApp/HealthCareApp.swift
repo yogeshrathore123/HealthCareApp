@@ -49,21 +49,11 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
 @main
 struct HealthCareApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-    
     // Notification delegate instance
     static let notificationDelegate = NotificationDelegate()
+
+     @State private var showSplash = true
 
     init() {
         // Register notification actions
@@ -72,11 +62,25 @@ struct HealthCareApp: App {
         UNUserNotificationCenter.current().delegate = Self.notificationDelegate
     }
 
-    var body: some Scene {
+
+      var body: some Scene {
         WindowGroup {
-            MainTabView()
-                .environmentObject(HealthAppViewModel.shared)
+            ZStack {
+                if showSplash {
+                    SplashScreenView()
+                        .transition(.opacity)
+                } else {
+                    MainTabView()
+                        .environmentObject(HealthAppViewModel.shared)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation {
+                        showSplash = false
+                    }
+                }
+            }
         }
-        .modelContainer(sharedModelContainer)
     }
 }

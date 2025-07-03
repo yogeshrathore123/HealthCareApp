@@ -10,8 +10,8 @@ import Foundation
 // MARK: - Mock Data
 struct MockData {
     static let sampleUser = User(
-        name: "John Doe",
-        age: 35,
+        name: "Yogesh Rathore",
+        age: 34,
         gender: .male,
         height: 175.0,
         weight: 70.0

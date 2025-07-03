@@ -28,6 +28,8 @@ class HealthAppViewModel: ObservableObject {
     @Published var highlightedMedicationId: UUID? = nil
     @Published var pendingShowTakenConfirmationId: UUID? = nil
     
+    private var cancellables = Set<AnyCancellable>()
+    
     init(
         userViewModel: UserViewModel = UserViewModel(),
         appointmentViewModel: AppointmentViewModel = AppointmentViewModel(),
@@ -38,6 +40,23 @@ class HealthAppViewModel: ObservableObject {
         self.appointmentViewModel = appointmentViewModel
         self.medicationViewModel = medicationViewModel
         self.healthSummaryViewModel = healthSummaryViewModel
+        
+        // Forward change notifications from sub-view models
+        userViewModel.objectWillChange.sink { [weak self] in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        
+        appointmentViewModel.objectWillChange.sink { [weak self] in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        
+        medicationViewModel.objectWillChange.sink { [weak self] in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        
+        healthSummaryViewModel.objectWillChange.sink { [weak self] in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
     }
     
     // MARK: - User Profile Methods
@@ -87,12 +106,7 @@ class HealthAppViewModel: ObservableObject {
     func updateHealthSummary(steps: Int, heartRate: Int, calories: Int, sleepHours: Double, waterIntake: Double) {
         healthSummaryViewModel.updateHealthSummary(steps: steps, heartRate: heartRate, calories: calories, sleepHours: sleepHours, waterIntake: waterIntake)
     }
-    
-    // MARK: - Notification Methods
-    // REMOVED: requestNotificationPermission()
-    // REMOVED: scheduleMedicationNotification(for:)
-    // REMOVED: registerNotificationActions()
-    
+        
     // MARK: - Utility Methods
     func calculateBMI() -> Double {
         userViewModel.calculateBMI()
