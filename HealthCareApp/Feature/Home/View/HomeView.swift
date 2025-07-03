@@ -117,6 +117,7 @@ struct HomeView: View {
                     color: .green
                 ) {
                     // Handle medication logging
+                    viewModel.showingAddMedication = true
                 }
             }
         }

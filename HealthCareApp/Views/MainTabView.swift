@@ -48,6 +48,24 @@ struct MainTabView: View {
                 viewModel.openMedicationsTab = false
             }
         }
+        .sheet(isPresented: $viewModel.showingAddAppointment, onDismiss: {
+            viewModel.showingAddAppointment = false
+        }) {
+            AddAppointmentView(onAdd: {
+                viewModel.showingAddAppointment = false
+                selectedTab = 1
+            })
+            .environmentObject(viewModel)
+        }
+        .sheet(isPresented: $viewModel.showingAddMedication, onDismiss: {
+            viewModel.showingAddMedication = false
+        }) {
+            AddMedicationView(onAdd: {
+                viewModel.showingAddMedication = false
+                selectedTab = 2
+            })
+            .environmentObject(viewModel)
+        }
     }
 }
 
